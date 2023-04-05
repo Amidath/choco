@@ -1,0 +1,51 @@
+name: Chocolatine
+
+on:
+  push:
+    branches-ignore:
+      - 'ga-ignore-* '
+  pull_request:
+    branches-ignore:
+      - 'ga-ignore-*'
+
+env:
+  MIRROR_URL: git@github.com:EpitechPromo2027/B-MAT-100-COT-1-1-101pong-amidath.lanignan.git #mettre l'url du repo visé
+  EXECUTABLES: 101pong
+
+jobs:
+  check_program_compilation:
+    runs-on: ubuntu-latest
+    container: epitechcontent/epitest-docker
+    steps:
+      - name: make_test
+        uses: actions/checkout@v3
+      - run: make
+        timeout-minutes: 1
+      - name: make_clean_test
+        uses: actions/checkout@v3
+      - run: make clean
+
+run_tests:
+    runs-on: ubuntu-latest
+    container: epitechcontent/epitest-docker
+    needs: [check_program_compilation]
+    steps:
+      - name: run_tests
+        uses: actions/checkout@v3
+      - run:
+          make test run
+        timeout-minutes: 2
+push_to_mirror:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    needs: [check_program_compilation, run_tests]
+    steps:
+        - uses: actions/checkout@v3
+          with:
+            fetch-depth: 0
+	- uses: pixta-dev/repository-mirroring-action@v1
+          with:
+            target_repo_url:
+                ${{ env.MIRROR_URL }}
+            ssh_private_key:
+                ${{ secrets.GIT_SSH_PRIVATE_KEY }}
